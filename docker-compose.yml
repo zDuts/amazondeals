@@ -9,6 +9,5 @@ services:
       - "7777:8000"
     volumes:
       - ./data:/app/data
-    # Environment variables if needed in future
-    # environment:
-    #   - USER_AGENT=...
+    environment:
+      - FLARESOLVERR_URL=http://flaresolverr:8191 # IP of your Flaresolverr or container name if on same network

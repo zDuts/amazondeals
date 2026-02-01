@@ -16,22 +16,47 @@ SEARCH_URLS = {
     "dealabs": "https://www.dealabs.com/search/bons-plans?merchant-id=36"
 }
 
+import os
+import aiohttp
+
 class DealScraper:
     def __init__(self):
-        pass
+        self.flaresolverr_url = os.getenv("FLARESOLVERR_URL")
 
     async def scrape_site(self, context, source: str, url: str):
         logger.info(f"Scraping {source} from {url}")
         page = await context.new_page()
         try:
-            await page.goto(url, timeout=90000, wait_until="domcontentloaded")
-            
-            # Wait for the deals list to appear (increased timeout for slower VPS/Cloudflare challenges)
-            await page.wait_for_selector(".threadGrid", timeout=60000)
-            
-            # Scroll down a bit to ensure lazy loading triggers if needed (usually 1st page is enough)
-            await page.evaluate("window.scrollTo(0, 1000)")
-            await asyncio.sleep(5) # Increased wait time for stability
+            if self.flaresolverr_url:
+                logger.info(f"Using Flaresolverr at {self.flaresolverr_url}")
+                async with aiohttp.ClientSession() as session:
+                    payload = {
+                        "cmd": "request.get",
+                        "url": url,
+                        "maxTimeout": 60000
+                    }
+                    async with session.post(f"{self.flaresolverr_url}/v1", json=payload) as resp:
+                        if resp.status == 200:
+                            data = await resp.json()
+                            if data.get("status") == "ok":
+                                html_content = data["solution"]["response"]
+                                await page.set_content(html_content)
+                                logger.info("Successfully fetched HTML via Flaresolverr")
+                            else:
+                                logger.error(f"Flaresolverr status not ok: {data}")
+                                return
+                        else:
+                            logger.error(f"Flaresolverr failed with status {resp.status}")
+                            return
+            else:
+                await page.goto(url, timeout=90000, wait_until="domcontentloaded")
+                
+                # Wait for the deals list to appear (increased timeout for slower VPS/Cloudflare challenges)
+                await page.wait_for_selector(".threadGrid", timeout=60000)
+                
+                # Scroll down a bit to ensure lazy loading triggers if needed (usually 1st page is enough)
+                await page.evaluate("window.scrollTo(0, 1000)")
+                await asyncio.sleep(5) # Increased wait time for stability
 
             deals_data = await self.parse_deals(page, source)
             self.save_deals(deals_data)
