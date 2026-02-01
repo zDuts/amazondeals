@@ -24,19 +24,14 @@ class DealScraper:
         logger.info(f"Scraping {source} from {url}")
         page = await context.new_page()
         try:
-            # Set a realistic user agent
-            await page.set_extra_http_headers({
-                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-            })
+            await page.goto(url, timeout=90000, wait_until="domcontentloaded")
             
-            await page.goto(url, timeout=60000, wait_until="domcontentloaded")
-            
-            # Wait for the deals list to appear
-            await page.wait_for_selector(".threadGrid", timeout=15000)
+            # Wait for the deals list to appear (increased timeout for slower VPS/Cloudflare challenges)
+            await page.wait_for_selector(".threadGrid", timeout=60000)
             
             # Scroll down a bit to ensure lazy loading triggers if needed (usually 1st page is enough)
             await page.evaluate("window.scrollTo(0, 1000)")
-            await asyncio.sleep(2)
+            await asyncio.sleep(5) # Increased wait time for stability
 
             deals_data = await self.parse_deals(page, source)
             self.save_deals(deals_data)
@@ -123,8 +118,22 @@ class DealScraper:
     async def run(self):
         async with async_playwright() as p:
             # Determine if we run headless (default true)
-            browser = await p.chromium.launch(headless=True, args=["--no-sandbox", "--disable-setuid-sandbox"])
-            context = await browser.new_context()
+            # Add args to reduce detection
+            browser = await p.chromium.launch(
+                headless=True, 
+                args=[
+                    "--no-sandbox", 
+                    "--disable-setuid-sandbox", 
+                    "--disable-blink-features=AutomationControlled"
+                ]
+            )
+            
+            # Use a more realistic context setup
+            context = await browser.new_context(
+                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+                viewport={"width": 1920, "height": 1080},
+                locale="de-DE"
+            )
             
             tasks = []
             for source, url in SEARCH_URLS.items():
