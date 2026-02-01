@@ -18,7 +18,7 @@ class Deal(SQLModel, table=True):
     
     # Composite unique constraint could be useful, but for now we'll rely on the deal_url for uniqueness checks during scrape
 
-DATABASE_URL = "sqlite:///./deals.db"
+DATABASE_URL = "sqlite:///./data/deals.db"
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 
 def create_db_and_tables():
