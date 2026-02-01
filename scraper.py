@@ -39,8 +39,17 @@ class DealScraper:
             
         except Exception as e:
             logger.error(f"Error scraping {source}: {e}")
-            # Take a screenshot for debugging if running locally or accessible
-            # await page.screenshot(path=f"error_{source}.png")
+            try:
+                # Save screenshot to static folder for viewing
+                await page.screenshot(path=f"static/error_{source}.png")
+                
+                # Log page info to debug Cloudflare/Access Denied
+                content = await page.content()
+                title = await page.title()
+                logger.error(f"Page Title: {title}")
+                logger.error(f"Page Content Snippet: {content[:500]}")
+            except Exception as inner_e:
+                logger.error(f"Failed to capture debug info: {inner_e}")
         finally:
             await page.close()
 
