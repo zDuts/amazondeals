@@ -1,0 +1,88 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Amazon Deals Aggregator</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header>
+        <div class="container header-content">
+            <h1>Amazon Deals</h1>
+            <div class="controls">
+                <button id="refresh-btn" onclick="refreshDeals()">
+                    <span class="icon">↻</span> Refresh
+                </button>
+            </div>
+        </div>
+        <div class="container filters">
+            <a href="/" class="filter-chip {% if not current_source %}active{% endif %}">All</a>
+            <a href="/?source=mydealz" class="filter-chip {% if current_source == 'mydealz' %}active{% endif %}">🇩🇪 MyDealz</a>
+            <a href="/?source=pepper" class="filter-chip {% if current_source == 'pepper' %}active{% endif %}">🇳🇱 Pepper</a>
+            <a href="/?source=dealabs" class="filter-chip {% if current_source == 'dealabs' %}active{% endif %}">🇫🇷 Dealabs</a>
+        </div>
+    </header>
+
+    <main class="container">
+        <div class="deals-grid">
+            {% for deal in deals %}
+            <article class="deal-card">
+                <div class="deal-image">
+                    {% if deal.image_url %}
+                    <img src="{{ deal.image_url }}" alt="{{ deal.title }}" loading="lazy">
+                    {% else %}
+                    <div class="no-image">No Image</div>
+                    {% endif %}
+                    <span class="temp-badge {% if '-' in deal.temperature %}cold{% else %}hot{% endif %}">
+                        {{ deal.temperature }}
+                    </span>
+                    <span class="source-badge {{ deal.source }}">{{ deal.source }}</span>
+                </div>
+                <div class="deal-content">
+                    <h2 class="deal-title"><a href="{{ deal.deal_url }}" target="_blank">{{ deal.title }}</a></h2>
+                    <div class="deal-meta">
+                        <div class="price-block">
+                            {% if deal.price %}
+                            <span class="price">{{ deal.price }}</span>
+                            {% endif %}
+                            {% if deal.original_price %}
+                            <span class="original-price">{{ deal.original_price }}</span>
+                            {% endif %}
+                        </div>
+                        <a href="{{ deal.deal_url }}" target="_blank" class="btn-view">View Deal</a>
+                    </div>
+                </div>
+            </article>
+            {% else %}
+            <div class="empty-state">
+                <p>No deals found. Click "Refresh" to fetch the latest deals.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </main>
+
+    <script>
+        async function refreshDeals() {
+            const btn = document.getElementById('refresh-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="icon spinning">↻</span> Scraping...';
+            
+            try {
+                const res = await fetch('/api/refresh');
+                if (res.ok) {
+                    alert('Scraping started in background. Page will reload in 5 seconds.');
+                    setTimeout(() => window.location.reload(), 5000);
+                }
+            } catch (e) {
+                console.error(e);
+                alert('Failed to start scrape');
+                btn.disabled = false;
+                btn.innerHTML = '<span class="icon">↻</span> Refresh';
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  amazon-deals:
+    image: zduts/amazondeals:latest
+    container_name: amazon-deals
+    restart: unless-stopped
+    ports:
+      - "7777:8000"
+    volumes:
+      - ./deals.db:/app/deals.db
+    # Environment variables if needed in future
+    # environment:
+    #   - USER_AGENT=...
